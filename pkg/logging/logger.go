@@ -1,0 +1,79 @@
+package logging
+
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+
+type Logger interface {
+	Info(msg string, fields ...zapcore.Field)
+	Error(msg string, fields ...zapcore.Field)
+	Fatal(msg string, fields ...zapcore.Field)
+	Warn(msg string, fields ...zapcore.Field)
+	Debug(msg string, fields ...zapcore.Field)
+	Named(name string) Logger
+	With(...zapcore.Field) Logger
+	Unwrap() *zap.Logger
+}
+
+// logger used to log context-unawared logs.
+type logger struct {
+	logger *zap.Logger
+}
+
+func NewLogger(logLevel string, opts ...zap.Option) (Logger, error) {
+	opts = append(opts, zap.AddCallerSkip(1))
+
+	l, err := newZapLogger(logLevel, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logger{logger: l}, nil
+}
+
+func NewDevelopmentLogger(opts ...zap.Option) (Logger, error) {
+	opts = append(opts, zap.AddCallerSkip(1))
+
+	l, err := zap.NewDevelopment(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init logger for development: %w", err)
+	}
+
+	return &logger{logger: l}, nil
+}
+
+func (l *logger) Info(msg string, fields ...zapcore.Field) {
+	l.logger.Info(msg, fields...)
+}
+
+func (l *logger) Error(msg string, fields ...zapcore.Field) {
+	l.logger.Error(msg, fields...)
+}
+
+func (l *logger) Fatal(msg string, fields ...zapcore.Field) {
+	l.logger.Fatal(msg, fields...)
+}
+
+func (l *logger) Warn(msg string, fields ...zapcore.Field) {
+	l.logger.Warn(msg, fields...)
+}
+
+func (l *logger) Debug(msg string, fields ...zapcore.Field) {
+	l.logger.Debug(msg, fields...)
+}
+
+func (l *logger) Named(name string) Logger {
+	return &logger{logger: l.logger.Named(name)}
+}
+
+func (l *logger) With(fields ...zapcore.Field) Logger {
+	return &logger{logger: l.logger.With(fields...)}
+}
+
+func (l *logger) Unwrap() *zap.Logger {
+	return l.logger
+}
